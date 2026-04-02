@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile data including preferences and role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user." },
+        "displayName": { "type": "string", "description": "User's display name." },
+        "email": { "type": "string", "description": "User's email address." },
+        "photoURL": { "type": "string", "description": "URL to user's profile picture." },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "User's role in the system." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created." }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "A single message in a chat session.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "UID of the user who sent the message." },
+        "role": { "type": "string", "enum": ["user", "model"], "description": "Role of the message sender." },
+        "content": { "type": "string", "description": "The text content of the message." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the message was sent." }
+      },
+      "required": ["uid", "role", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Storage for user profile information."
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Historical chat messages for a specific user."
+    }
+  }
+}

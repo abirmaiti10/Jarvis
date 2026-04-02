@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches auth.uid)
+    // Fields:
+    //   - uid: string (required) - User's unique ID
+    //   - displayName: string (optional) - User's name
+    //   - email: string (required) - User's email
+    //   - photoURL: string (optional) - Profile picture URL
+    //   - role: string (required, 'admin'|'user') - User role
+    //   - createdAt: timestamp (optional) - Creation date
+    //
+    // Collection: users/{userId}/messages
+    // Document ID: {messageId}
+    // Fields:
+    //   - uid: string (required) - User's unique ID
+    //   - role: string (required, 'user'|'model') - Sender role
+    //   - content: string (required) - Message text
+    //   - timestamp: timestamp (required) - Message date
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "abir.maiti2010@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['uid', 'role', 'content', 'timestamp']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.role in ['user', 'model'] &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+
+      match /messages/{messageId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidMessage(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /{path=**}/messages/{messageId} {
+      allow read: if isAdmin();
+    }
+  }
+}

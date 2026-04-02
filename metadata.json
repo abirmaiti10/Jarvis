@@ -1,0 +1,5 @@
+{
+  "name": "Jarvis AI",
+  "description": "A sophisticated AI assistant capable of self-evolution and personalized interaction.",
+  "requestFramePermissions": ["microphone"]
+}
